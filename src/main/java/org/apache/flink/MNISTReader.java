@@ -18,6 +18,7 @@
 
 package org.apache.flink;
 
+import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.functions.source.RichSourceFunction;
 import org.apache.flink.util.Preconditions;
@@ -33,14 +34,16 @@ import static org.apache.flink.MNISTModel.DIMENSIONS;
 /**
  * MNIST data reader.
  */
-class MNISTReader extends RichSourceFunction<List<Float>> {
+class MNISTReader extends RichSourceFunction<Tuple2<List<Float>, Integer>> {
 
     private final String imageFilePath;
+    private final String labelFilePath;
 
     private transient volatile boolean running;
 
-    MNISTReader(String imageFilePath) {
+    MNISTReader(String imageFilePath, String labelFilePath) {
         this.imageFilePath = imageFilePath;
+        this.labelFilePath = labelFilePath;
     }
 
     @Override
@@ -49,7 +52,7 @@ class MNISTReader extends RichSourceFunction<List<Float>> {
     }
 
     @Override
-    public void run(SourceContext<List<Float>> ctx) throws Exception {
+    public void run(SourceContext<Tuple2<List<Float>, Integer>> ctx) throws Exception {
         DataInputStream dataInputStream = new DataInputStream(new BufferedInputStream(new FileInputStream(imageFilePath)));
         // read magic number
         dataInputStream.readInt();
@@ -58,16 +61,24 @@ class MNISTReader extends RichSourceFunction<List<Float>> {
         Preconditions.checkState(dataInputStream.readInt() == 28);
         Preconditions.checkState(dataInputStream.readInt() == 28);
 
+        DataInputStream labelInputStream = new DataInputStream(new BufferedInputStream(new FileInputStream(labelFilePath)));
+        int labelMagicNumber = labelInputStream.readInt();
+        int numberOfLabels = labelInputStream.readInt();
+
+        System.out.println("labels magic number is: " + labelMagicNumber);
+        System.out.println("number of labels is: " + numberOfLabels);
+
         int count = 0;
         while (running && count < numberOfItems) {
             List<Float> data = new ArrayList<>(DIMENSIONS.f0);
             for (int i = 0; i < DIMENSIONS.f0; ++i) {
                 data.add((float) dataInputStream.readUnsignedByte());
             }
-            ctx.collect(data);
+            ctx.collect(Tuple2.of(data, labelInputStream.readUnsignedByte()));
             count += 1;
         }
         dataInputStream.close();
+        labelInputStream.close();
     }
 
     @Override

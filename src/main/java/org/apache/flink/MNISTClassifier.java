@@ -20,6 +20,7 @@ package org.apache.flink;
 
 import org.apache.flink.api.common.externalresource.ExternalResourceInfo;
 import org.apache.flink.api.common.functions.RichMapFunction;
+import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.util.Preconditions;
 
@@ -38,7 +39,7 @@ import static org.apache.flink.MNISTModel.DIMENSIONS;
 /**
  * MNIST classifier.
  */
-class MNISTClassifier extends RichMapFunction<List<Float>, Integer> {
+class MNISTClassifier extends RichMapFunction<Tuple2<List<Float>, Integer>, Tuple2<Integer, Integer>> {
 
     private final String resourceName;
     private Pointer matrixPointer;
@@ -77,7 +78,7 @@ class MNISTClassifier extends RichMapFunction<List<Float>, Integer> {
     }
 
     @Override
-    public Integer map(List<Float> value) {
+    public Tuple2<Integer, Integer> map(Tuple2<List<Float>, Integer> value) {
         final float[] input = new float[DIMENSIONS.f0];
         final float[] output = new float[DIMENSIONS.f1];
         final Pointer inputPointer = new Pointer();
@@ -85,7 +86,7 @@ class MNISTClassifier extends RichMapFunction<List<Float>, Integer> {
 
         // Fill the input and output matrix
         for (int i = 0; i < DIMENSIONS.f0; i++) {
-            input[i] = value.get(i);
+            input[i] = value.f0.get(i);
         }
         for (int i = 0; i < DIMENSIONS.f1; i++) {
             output[i] = 0;
@@ -115,7 +116,7 @@ class MNISTClassifier extends RichMapFunction<List<Float>, Integer> {
             result = output[i] > output[result] ? i : result;
         }
 
-        return result;
+        return Tuple2.of(result, value.f1);
     }
 
     @Override

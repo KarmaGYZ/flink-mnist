@@ -19,6 +19,7 @@
 package org.apache.flink;
 
 import org.apache.flink.api.common.serialization.SimpleStringEncoder;
+import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.utils.ParameterTool;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.streaming.api.datastream.DataStream;
@@ -42,6 +43,7 @@ public class MNISTInference {
         env.getConfig().setGlobalJobParameters(params);
 
         final String imageFile = params.getRequired("image-file");
+        final String labelFile = params.getRequired("label-file");
         String resourceName;
         if (params.has("resource-name")) {
             resourceName = params.get("resource-name");
@@ -50,15 +52,15 @@ public class MNISTInference {
             resourceName = DEFAULT_RESOURCE_NAME;
         }
 
-        DataStream<Integer> result =
-                env.addSource(new MNISTReader(imageFile))
+        DataStream<Tuple2<Integer, Integer>> result =
+                env.addSource(new MNISTReader(imageFile, labelFile))
                         .map(new MNISTClassifier(resourceName));
 
         // emit result
         if (params.has("output")) {
 			result.addSink(
 				StreamingFileSink.forRowFormat(new Path(params.get("output")),
-					new SimpleStringEncoder<Integer>()).build());
+					new SimpleStringEncoder<Tuple2<Integer, Integer>>()).build());
         } else {
             System.out.println("Printing result to stdout. Use --output to specify output path.");
             result.print();
