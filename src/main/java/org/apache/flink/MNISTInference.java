@@ -18,12 +18,9 @@
 
 package org.apache.flink;
 
-import org.apache.flink.api.common.serialization.SimpleStringEncoder;
 import org.apache.flink.api.java.utils.ParameterTool;
-import org.apache.flink.core.fs.Path;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-import org.apache.flink.streaming.api.functions.sink.filesystem.StreamingFileSink;
 
 public class MNISTInference {
 
@@ -56,9 +53,7 @@ public class MNISTInference {
 
         // emit result
         if (params.has("output")) {
-			result.addSink(
-				StreamingFileSink.forRowFormat(new Path(params.get("output")),
-					new SimpleStringEncoder<Integer>()).build());
+			result.writeAsText(params.get("output"));
         } else {
             System.out.println("Printing result to stdout. Use --output to specify output path.");
             result.print();
